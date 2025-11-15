@@ -12,19 +12,23 @@ interface SuggestionResponse {
 }
 
 class AISuggestionService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  private genAI: GoogleGenerativeAI | null = null;
+  private model: any = null;
 
-  constructor() {
+  private initialize() {
+    if (this.genAI) return; // Already initialized
+    
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   }
 
   async suggestFix(tinyCycle: TinyCycle, node1Label: string, node2Label: string): Promise<SuggestionResponse> {
+    this.initialize(); // Initialize on first use
+    
     const prompt = `You are a microservices architecture expert. I have detected a tiny cycle (bidirectional dependency) between two microservices:
 
 Service A: "${node1Label}" (ID: ${tinyCycle.node1})
