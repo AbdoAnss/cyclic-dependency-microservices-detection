@@ -1,0 +1,22 @@
+{
+  "name": "tiny-cycles-detection-app",
+  "version": "1.0.0",
+  "description": "Microservices graph visualization with cycle detection",
+  "scripts": {
+    "setup": "powershell -ExecutionPolicy Bypass -File ./setup.ps1",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "microservices",
+    "graph",
+    "visualization",
+    "neo4j",
+    "reactflow",
+    "cycle-detection"
+  ],
+  "author": "",
+  "license": "MIT"
+}
