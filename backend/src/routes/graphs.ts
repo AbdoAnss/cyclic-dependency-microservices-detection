@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDriver } from '../db/neo4j';
 import { GraphAnalyzer } from '../services/graphAnalyzer';
+import aiSuggestionService from '../services/aiSuggestionService';
 
 const router = Router();
 const analyzer = new GraphAnalyzer();
@@ -260,6 +261,58 @@ router.post('/:id/detect-tiny-cycles', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error detecting tiny cycles:', error);
     res.status(500).json({ error: 'Failed to detect tiny cycles' });
+  } finally {
+    await session.close();
+  }
+});
+
+// Suggest fix for tiny cycle using Gemini AI
+router.post('/:id/suggest-fix', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { node1, node2 } = req.body;
+
+  if (!node1 || !node2) {
+    return res.status(400).json({ error: 'node1 and node2 are required' });
+  }
+
+  const driver = getDriver();
+  const session = driver.session();
+
+  try {
+    // Fetch the graph to get node labels
+    const result = await session.run(
+      'MATCH (g:Graph {id: $id}) RETURN g.data as data',
+      { id }
+    );
+
+    if (result.records.length === 0) {
+      return res.status(404).json({ error: 'Graph not found' });
+    }
+
+    const graphData: GraphData = JSON.parse(result.records[0].get('data'));
+
+    // Find the node labels
+    const node1Data = graphData.nodes.find(n => n.id === node1);
+    const node2Data = graphData.nodes.find(n => n.id === node2);
+
+    if (!node1Data || !node2Data) {
+      return res.status(404).json({ error: 'Nodes not found in graph' });
+    }
+
+    const node1Label = node1Data.data?.label || node1;
+    const node2Label = node2Data.data?.label || node2;
+
+    // Get AI suggestion
+    const suggestion = await aiSuggestionService.suggestFix(
+      { node1, node2 },
+      node1Label,
+      node2Label
+    );
+
+    res.json(suggestion);
+  } catch (error) {
+    console.error('Error suggesting fix:', error);
+    res.status(500).json({ error: 'Failed to generate suggestion' });
   } finally {
     await session.close();
   }

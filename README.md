@@ -8,8 +8,10 @@ A full-stack application for visualizing and analyzing microservices dependencie
 - 🔄 N:N relationships between microservices
 - 📊 Graph metrics and analysis
 - 🔍 Strongly connected components detection (cycle detection)
+- 🤖 AI-powered fix suggestions using Google Gemini
 - 💾 Graph persistence with Neo4j
 - 🎯 Real-time graph visualization
+- ✏️ Edit microservice names and relationships with double-click
 
 ## Tech Stack
 
@@ -24,11 +26,13 @@ A full-stack application for visualizing and analyzing microservices dependencie
 - Neo4j for graph database
 - TypeScript
 - Tarjan's algorithm for SCC detection
+- Google Gemini AI for architectural suggestions
 
 ## Prerequisites
 
 - Node.js 18+ and npm/yarn
 - Neo4j Database (local or remote)
+- Google Gemini API key (for AI suggestions)
 
 ## Setup Instructions
 
@@ -71,11 +75,12 @@ npm install
 # Copy environment file
 cp .env.example .env
 
-# Edit .env with your Neo4j credentials
+# Edit .env with your Neo4j credentials and Gemini API key
 # NEO4J_URI=bolt://localhost:7687
 # NEO4J_USER=neo4j
 # NEO4J_PASSWORD=your_password
 # PORT=3001
+# GEMINI_API_KEY=your_gemini_api_key_here
 
 # Run in development mode
 npm run dev
@@ -120,6 +125,29 @@ The frontend will run on http://localhost:3000
   - Maximum degree
 - View strongly connected components (cycles)
 - Identify circular dependencies
+- **Detect tiny cycles** (2-node bidirectional dependencies)
+- **Get AI-powered fix suggestions** for each tiny cycle
+
+## AI-Powered Fix Suggestions
+
+When tiny cycles (bidirectional dependencies between two services) are detected, you can click the **"Fix with AI"** button to get architectural suggestions from Google Gemini.
+
+### What the AI Provides:
+1. **Problem Analysis**: Explanation of why the circular dependency is problematic
+2. **Multiple Solutions**: 3 concrete architectural patterns to break the cycle
+3. **Implementation Guidance**: Step-by-step approaches for each solution
+4. **Best Practice Recommendation**: Which solution is most appropriate for your case
+
+### Example Suggestions:
+- Introduce an intermediary service or event bus
+- Use asynchronous messaging patterns
+- Refactor to extract shared logic into a common service
+- Implement API Gateway pattern
+- Use publish-subscribe architecture
+
+### Setup:
+1. Get a free API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Add it to your `backend/.env` file: `GEMINI_API_KEY=your_key_here`
 
 ## API Endpoints
 
@@ -130,6 +158,9 @@ The frontend will run on http://localhost:3000
 - `PUT /api/graphs/:id` - Update graph
 - `DELETE /api/graphs/:id` - Delete graph
 - `POST /api/graphs/:id/analyze` - Analyze graph and get metrics
+- `POST /api/graphs/:id/find-cycles` - Find all elementary cycles in a component
+- `POST /api/graphs/:id/detect-tiny-cycles` - Detect 2-node cycles
+- `POST /api/graphs/:id/suggest-fix` - Get AI suggestion for fixing a tiny cycle
 
 ## Graph Analysis
 

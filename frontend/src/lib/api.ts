@@ -51,6 +51,12 @@ export interface TinyCycle {
   node2: string;
 }
 
+export interface FixSuggestion {
+  cycle: TinyCycle;
+  suggestion: string;
+  strategies: string[];
+}
+
 export interface AnalysisResult {
   metrics: GraphMetrics;
   graphData: GraphData;
@@ -107,6 +113,12 @@ export const graphApi = {
   // Detect tiny cycles in a component
   detectTinyCycles: async (id: string, componentNodes: string[]): Promise<{ tinyCycles: TinyCycle[] }> => {
     const response = await api.post(`/graphs/${id}/detect-tiny-cycles`, { componentNodes });
+    return response.data;
+  },
+
+  // Get AI suggestion to fix a tiny cycle
+  suggestFix: async (id: string, node1: string, node2: string): Promise<FixSuggestion> => {
+    const response = await api.post(`/graphs/${id}/suggest-fix`, { node1, node2 });
     return response.data;
   },
 };

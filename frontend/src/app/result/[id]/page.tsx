@@ -10,7 +10,7 @@ import ReactFlow, {
   useEdgesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { graphApi, AnalysisResult, Cycle, TinyCycle } from '@/lib/api';
+import { graphApi, AnalysisResult, Cycle, TinyCycle, FixSuggestion } from '@/lib/api';
 
 export default function ResultPage() {
   const params = useParams();
@@ -27,6 +27,8 @@ export default function ResultPage() {
   const [tinyCycles, setTinyCycles] = useState<TinyCycle[]>([]);
   const [loadingCycles, setLoadingCycles] = useState(false);
   const [loadingTinyCycles, setLoadingTinyCycles] = useState(false);
+  const [suggestions, setSuggestions] = useState<Map<string, FixSuggestion>>(new Map());
+  const [loadingSuggestion, setLoadingSuggestion] = useState<string | null>(null);
 
   useEffect(() => {
     loadResults();
@@ -73,6 +75,20 @@ export default function ResultPage() {
       alert('Error detecting tiny cycles in component');
     } finally {
       setLoadingTinyCycles(false);
+    }
+  };
+
+  const handleSuggestFix = async (tinyCycle: TinyCycle) => {
+    const cycleKey = `${tinyCycle.node1}-${tinyCycle.node2}`;
+    setLoadingSuggestion(cycleKey);
+    try {
+      const suggestion = await graphApi.suggestFix(id, tinyCycle.node1, tinyCycle.node2);
+      setSuggestions(new Map(suggestions.set(cycleKey, suggestion)));
+    } catch (error) {
+      console.error('Error getting suggestion:', error);
+      alert('Error getting AI suggestion. Please check your Gemini API key.');
+    } finally {
+      setLoadingSuggestion(null);
     }
   };
 
@@ -246,18 +262,68 @@ export default function ResultPage() {
                         <div className="font-medium mb-2 text-sm text-orange-900">
                           🔄 Tiny Cycles (2-node cycles): {tinyCycles.length}
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {tinyCycles.map((tinyCycle, tcIdx) => {
                             const node1 = nodes.find(n => n.id === tinyCycle.node1);
                             const node2 = nodes.find(n => n.id === tinyCycle.node2);
+                            const cycleKey = `${tinyCycle.node1}-${tinyCycle.node2}`;
+                            const suggestion = suggestions.get(cycleKey);
+                            const isLoadingSuggestion = loadingSuggestion === cycleKey;
+                            
                             return (
-                              <div key={tcIdx} className="bg-white p-2 rounded border border-orange-300 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-orange-700">Tiny Cycle {tcIdx + 1}:</span>
-                                  <span className="text-gray-700">
-                                    {node1?.data?.label || tinyCycle.node1} ⇄ {node2?.data?.label || tinyCycle.node2}
-                                  </span>
+                              <div key={tcIdx} className="bg-white p-3 rounded border border-orange-300">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-orange-700">Tiny Cycle {tcIdx + 1}:</span>
+                                    <span className="text-gray-700">
+                                      {node1?.data?.label || tinyCycle.node1} ⇄ {node2?.data?.label || tinyCycle.node2}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleSuggestFix(tinyCycle)}
+                                    disabled={isLoadingSuggestion}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition disabled:bg-gray-400 flex items-center gap-1"
+                                  >
+                                    {isLoadingSuggestion ? (
+                                      <>
+                                        <span className="animate-spin">⚙️</span>
+                                        <span>Analyzing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span>🤖</span>
+                                        <span>Fix with AI</span>
+                                      </>
+                                    )}
+                                  </button>
                                 </div>
+                                
+                                {suggestion && (
+                                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="text-lg">💡</span>
+                                      <span className="font-semibold text-blue-900">AI Suggestion</span>
+                                    </div>
+                                    <div className="text-sm text-gray-800 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                                      {suggestion.suggestion}
+                                    </div>
+                                    {suggestion.strategies.length > 0 && (
+                                      <div className="mt-3 pt-3 border-t border-blue-200">
+                                        <div className="font-medium text-xs text-blue-800 mb-2">Quick Strategies:</div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {suggestion.strategies.map((strategy, idx) => (
+                                            <span
+                                              key={idx}
+                                              className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                                            >
+                                              {strategy}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
